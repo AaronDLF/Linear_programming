@@ -1,54 +1,70 @@
-import pulp
+from pulp import LpMinimize, LpProblem, LpVariable, lpSum
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Definimos los conjuntos de empleados y tareas
-empleados = ["Empleado 1", "Empleado 2", "Empleado 3"]
-tareas = ["Tarea 1", "Tarea 2", "Tarea 3"]
+# Definir la matriz de costos (en millones de u.m.)
+cost_matrix = [
+    [280, 320, 360],  # Costos del contratista C1
+    [360, 280, 300],  # Costos del contratista C2
+    [380, 340, 400]   # Costos del contratista C3
+]
 
-# Costos de asignación
-costos = {
-    ("Empleado 1", "Tarea 1"): 10, ("Empleado 1", "Tarea 2"): 2, ("Empleado 1", "Tarea 3"): 8,
-    ("Empleado 2", "Tarea 1"): 7, ("Empleado 2", "Tarea 2"): 5, ("Empleado 2", "Tarea 3"): 3,
-    ("Empleado 3", "Tarea 1"): 4, ("Empleado 3", "Tarea 2"): 9, ("Empleado 3", "Tarea 3"): 6,
-}
+num_contratistas = len(cost_matrix)
+num_proyectos = len(cost_matrix[0])
 
 # Definir el problema de optimización
-problema = pulp.LpProblem("Problema_de_Asignacion", pulp.LpMinimize)
+prob = LpProblem("Asignacion_de_Proyectos", LpMinimize)
 
-# Variables de decisión
-x = pulp.LpVariable.dicts("Asignacion", costos, cat=pulp.LpBinary)
+# Variables de decisión: x[i][j] = 1 si el contratista i hace el proyecto j, 0 en caso contrario
+x = [[LpVariable(f"x_{i}_{j}", cat="Binary") for j in range(num_proyectos)] for i in range(num_contratistas)]
 
-# Función objetivo: Minimizar el costo total
-problema += pulp.lpSum(costos[i] * x[i] for i in costos), "Costo_Total"
+# Función objetivo: minimizar el costo total de asignación
+prob += lpSum(cost_matrix[i][j] * x[i][j] for i in range(num_contratistas) for j in range(num_proyectos))
 
-# Restricción: Cada empleado solo realiza una tarea
-for e in empleados:
-    problema += pulp.lpSum(x[(e, t)] for t in tareas) == 1
+# Restricciones: Cada proyecto debe ser asignado a un solo contratista
+for j in range(num_proyectos):
+    prob += lpSum(x[i][j] for i in range(num_contratistas)) == 1
 
-# Restricción: Cada tarea debe ser asignada a un único empleado
-for t in tareas:
-    problema += pulp.lpSum(x[(e, t)] for e in empleados) == 1
+# Restricciones: Cada contratista debe recibir solo un proyecto
+for i in range(num_contratistas):
+    prob += lpSum(x[i][j] for j in range(num_proyectos)) == 1
 
 # Resolver el problema
-problema.solve()
+prob.solve()
 
-# Obtener los resultados
-asignaciones = [(e, t) for e in empleados for t in tareas if x[(e, t)].varValue == 1]
+# Imprimir la asignación óptima
+print("Asignación óptima:")
+total_cost = 0
+asignaciones = []
+for i in range(num_contratistas):
+    for j in range(num_proyectos):
+        if x[i][j].varValue == 1:
+            print(f"Proyecto P{j+1} asignado a C{i+1} con costo {cost_matrix[i][j]} millones de u.m.")
+            total_cost += cost_matrix[i][j]
+            asignaciones.append((f"C{i+1}", f"P{j+1}"))
 
-# Crear y graficar el grafo
-G = nx.DiGraph()
-for e, t in asignaciones:
-    G.add_edge(e, t, weight=costos[(e, t)])
+print(f"Costo total mínimo: {total_cost} millones de u.m.")
 
-pos = nx.bipartite_layout(G, nodes=empleados)
-labels = {(e, t): costos[(e, t)] for e, t in asignaciones}
+# Visualización con NetworkX
+G = nx.Graph()
 
-plt.figure(figsize=(8, 6))
-nx.draw(G, pos, with_labels=True, node_size=3000, node_color="lightblue", edge_color="gray", font_size=10)
-nx.draw_networkx_edge_labels(G, pos, edge_labels=labels, font_size=10)
-plt.title("Asignación Óptima de Empleados a Tareas")
+# Agregar nodos
+contratistas_nodos = [f"C{i+1}" for i in range(num_contratistas)]
+proyectos_nodos = [f"P{j+1}" for j in range(num_proyectos)]
+
+G.add_nodes_from(contratistas_nodos, bipartite=0)
+G.add_nodes_from(proyectos_nodos, bipartite=1)
+
+# Agregar aristas según la asignación óptima
+G.add_edges_from(asignaciones)
+
+# Posiciones para visualizar en dos columnas
+pos = {}
+pos.update((n, (0, i)) for i, n in enumerate(contratistas_nodos))  # Contratistas a la izquierda
+pos.update((n, (1, i)) for i, n in enumerate(proyectos_nodos))  # Proyectos a la derecha
+
+# Dibujar el grafo
+plt.figure(figsize=(6, 4))
+nx.draw(G, pos, with_labels=True, node_size=2000, node_color="lightblue", edge_color="black", font_size=12)
+plt.title("Asignación Óptima de Contratistas a Proyectos")
 plt.show()
-
-# Mostrar las asignaciones óptimas
-asignaciones
