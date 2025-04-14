@@ -46,13 +46,9 @@ def resolver_modelo_y_comprobar(c1, c2, c3, b1, b2, b3, b4, descripcion, base_re
 base_original = resolver_modelo_y_comprobar(2, 3, 4, 300, 400, 120, 80, "Caso original del ejercicio")
 
 # Caso dentro del intervalo de sensibilidad (misma base óptima)
-resolver_modelo_y_comprobar(2.1, 2.9, 4, 310, 390, 120, 80, "Caso dentro del intervalo de sensibilidad", base_referencia=base_original)
+resolver_modelo_y_comprobar(2, 6, 4, 300, 400, 120, 80, "Caso fuera del intervalo de sensibilidad", base_referencia=base_original)
 
 # Caso fuera del intervalo de sensibilidad (la base óptima cambia)
-resolver_modelo_y_comprobar(1, 1, 4, 250, 350, 150, 90, "Caso fuera del intervalo de sensibilidad", base_referencia=base_original)
+resolver_modelo_y_comprobar(2.1, 2.9, 4, 310, 390, 120, 80, "Caso dentro del intervalo de sensibilidad", base_referencia=base_original)
 
-# Otro caso fuera del intervalo (por coeficientes)
-resolver_modelo_y_comprobar(5, 6, 1, 300, 400, 120, 80, "Caso con cambios fuertes en la función objetivo", base_referencia=base_original)
 
-# Otro caso dentro del intervalo
-resolver_modelo_y_comprobar(2, 3.1, 3.9, 295, 405, 120, 80, "Caso con cambios leves en restricciones y coeficientes", base_referencia=base_original)
